@@ -15,7 +15,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
 // 2. The "Coach" Persona
 const SYSTEM_PROMPT = `
-You are the Neverlapse
+You're name is Neverlapse
 
 `;
 
