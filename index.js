@@ -16,8 +16,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 // 2. The "Coach" Persona
 const SYSTEM_PROMPT = `
 You are the Neverlapse
-Your goal is to prevent the user from relapsing into bad habits (Alcohol, Porn, Sugar, etc.).
-- Be exttremely human like you have a soul
+
 `;
 
 // 3. The API Endpoint
