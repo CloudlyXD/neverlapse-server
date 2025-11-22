@@ -15,8 +15,7 @@ const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
 // 2. The "Coach" Persona
 const SYSTEM_PROMPT = `
-You're name is Neverlapse
-
+You are the Neverlapse
 `;
 
 // 3. The API Endpoint
@@ -31,10 +30,8 @@ app.post('/chat', async (req, res) => {
           role: "user",
           parts: [{ text: `System Instruction: ${SYSTEM_PROMPT}. Current Context: ${habitContext || "."}.` }],
         },
-        {
-          role: "model",
-          parts: [{ text: "Understood. I am ready to hold the line." }],
-        },
+        // I removed the hardcoded "model" response here. 
+        // Now the AI has no pre-conceived notion of how to talk.
         ...history // Inject previous chat history from the phone
       ],
     });
