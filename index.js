@@ -29,7 +29,7 @@ app.post('/chat', async (req, res) => {
       history: [
         {
           role: "user",
-          parts: [{ text: `System Instruction: ${SYSTEM_PROMPT}. Current Context: The user is struggling with ${habitContext || "General Discipline"}.` }],
+          parts: [{ text: `System Instruction: ${SYSTEM_PROMPT}. Current Context: The user is struggling with ${habitContext || "."}.` }],
         },
         {
           role: "model",
