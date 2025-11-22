@@ -11,7 +11,7 @@ app.use(express.json());
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 // We use gemini-1.5-pro as it is stable and smart. 
 // If you have access to gemini-2.0-flash-exp, you can swap the name here.
-const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
 // 2. The "Coach" Persona
 const SYSTEM_PROMPT = `
