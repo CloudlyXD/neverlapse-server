@@ -7,11 +7,34 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// 1. Setup Google AI
+// --- NEW: LOGGING CONFIGURATION ---
+const MONITORING_URL = 'https://monitoring-backend-4y4l.onrender.com/api/log';
+
+// Helper: Fire-and-forget logger (Won't crash app if it fails)
+async function sendLog(level, message, meta = {}) {
+  try {
+    // We do NOT await this. We want the AI to reply fast, 
+    // we don't want to wait for the logger.
+    fetch(MONITORING_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'RENDER_AI',
+        level: level,
+        message: message,
+        meta: meta
+      })
+    }).catch(err => console.error('Logging failed (non-fatal):', err.message));
+  } catch (e) {
+    // Ignore logging errors completely so main app never breaks
+    console.error('Logging fatal error:', e);
+  }
+}
+// ----------------------------------
+
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
-// 2. The REAL Coach Persona - Nev
 const SYSTEM_PROMPT = `You are Nev, an AI recovery coach built by Neverlapse Production. You help people break free from addictions and build better habits.
 
 IDENTITY:
@@ -60,37 +83,34 @@ WHAT TO AVOID:
 - Being preachy or talking down to them
 - Responses over 300 words (unless they ask for detailed advice)
 
-Remember: You're here to be the voice in their corner when their brain is lying to them. Keep it real, keep it helpful, keep it human.`;
+Remember: You're here to be the voice in their corner when their brain is lying to them. Keep it real, keep it helpful, keep it human.`; 
 
-// 3. The API Endpoint
 app.post('/chat', async (req, res) => {
+  const startTime = Date.now(); // Start timer
+
   try {
     const { message, history, habitContext } = req.body;
 
-    // Build context string
+    // Log that a request came in
+    sendLog('info', 'Incoming Chat Request', { 
+      context: habitContext,
+      historyLength: history ? history.length : 0 
+    });
+
     let contextString = SYSTEM_PROMPT;
     if (habitContext) {
       contextString += `\n\nCURRENT USER CONTEXT: ${habitContext}`;
     }
 
-    // Construct the chat session
     const chat = model.startChat({
       history: [
-        {
-          role: "user",
-          parts: [{ text: contextString }],
-        },
-        {
-          role: "model",
-          parts: [{ text: "Got it. I'm Nev, and I'm here to help you stay on track. What's going on?" }],
-        },
-        ...history // Inject previous chat history from the phone
+        { role: "user", parts: [{ text: contextString }] },
+        { role: "model", parts: [{ text: "Got it. I'm Nev." }] },
+        ...history
       ],
       generationConfig: {
-        maxOutputTokens: 500, // Keeps responses tight - roughly 300-400 words max
-        temperature: 0.8, // Balanced between creative and consistent
-        topP: 0.95,
-        topK: 40,
+        maxOutputTokens: 500,
+        temperature: 0.8,
       },
     });
 
@@ -98,16 +118,26 @@ app.post('/chat', async (req, res) => {
     const response = await result.response;
     let text = response.text();
 
-    // Extra safety: If response is somehow still too long, truncate it
-    const wordCount = text.split(/\s+/).length;
-    if (wordCount > 400) {
-      const words = text.split(/\s+/).slice(0, 350);
-      text = words.join(' ') + '... (Let me know if you need me to expand on anything!)';
-    }
+    const duration = Date.now() - startTime; // Calculate speed
+
+    // --- LOG SUCCESS ---
+    sendLog('success', 'AI Reply Sent', { 
+      latency_ms: duration, // This will draw your line chart!
+      input_length: message.length,
+      output_length: text.length
+    });
 
     res.json({ reply: text });
 
   } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    // --- LOG ERROR ---
+    sendLog('error', 'AI Generation Failed', { 
+      error: error.message,
+      latency_ms: duration
+    });
+
     console.error("AI Error:", error);
     res.status(500).json({ 
       error: "Nev's brain had a moment. Try again in a sec!" 
@@ -115,12 +145,10 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-// Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'Nev is alive and ready to help! 💪' });
+  res.json({ status: 'Nev is alive!' });
 });
 
-// 4. Start Server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🔥 Neverlapse Brain (Nev) is running on port ${PORT}`);
